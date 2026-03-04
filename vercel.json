@@ -12,7 +12,7 @@
   ],
   "routes": [
     {
-      "src": "/(.*\\..*)",        // fichiers avec extension
+      "src": "/(.*\\..*)",       
       "dest": "/public/$1"
     },
     {
