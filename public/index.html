@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calendrier liturgique orthodoxe</title>
+  <!-- Polices Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <!-- Font Awesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-wrapper">
+    <header>
+      <div class="header-top">
+        <h1><i class="fas fa-church"></i> <span id="app-title">Calendrier liturgique orthodoxe</span></h1>
+        <div class="lang-theme-controls">
+          <select id="langSelect" class="lang-select" aria-label="Choisir la langue">
+            <option value="fr">🇫🇷 Français</option>
+            <option value="mg">🇲🇬 Malagasy</option>
+            <option value="en">🇬🇧 English</option>
+          </select>
+
+          <!-- Nouveau sélecteur de calendrier -->
+          <select id="calendarSelect" class="lang-select" aria-label="Choisir le calendrier">
+            <option value="gregorian">📅 Grégorien</option>
+            <option value="julian">📅 Julien</option>
+          </select>
+
+          <button id="themeToggle" class="theme-toggle" aria-label="Changer le thème">
+            <i class="fas fa-moon"></i>
+            <i class="fas fa-sun"></i>
+          </button>
+        </div>
+      </div>
+      <div class="navigation-bar">
+        <button id="prevDayBtn" class="nav-btn" aria-label="Jour précédent"><i class="fas fa-chevron-left"></i></button>
+        <div class="date-picker">
+          <label for="dateInput"><i class="far fa-calendar-alt"></i> <span id="choose-date-label">Choisir une date :</span></label>
+          <input type="date" id="dateInput">
+          <button id="fetchButton"><i class="fas fa-search"></i> <span id="show-btn-text">Afficher</span></button>
+        </div>
+        <button id="nextDayBtn" class="nav-btn" aria-label="Jour suivant"><i class="fas fa-chevron-right"></i></button>
+      </div>
+    </header>
+
+    <main id="content">
+      <div id="loader" class="loader hidden">
+        <div class="spinner"></div>
+        <p id="loading-text">Chargement des données...</p>
+      </div>
+      <div id="error" class="error hidden"></div>
+      <div id="results"></div>
+    </main>
+
+    <footer>
+      <p>Données fournies par <a href="https://orthocal.info/" target="_blank" rel="noopener">Orthocal.info</a></p>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
