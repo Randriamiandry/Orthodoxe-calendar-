@@ -143,6 +143,13 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`Serveur démarré sur http://localhost:${PORT}`);
-});
+// --- ADAPTATION POUR VERCEL ---
+// Exporter l'application Express pour le déploiement serverless
+module.exports = app;
+
+// Démarrer le serveur en écoute uniquement en environnement local (non Vercel)
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`Serveur démarré sur http://localhost:${PORT}`);
+  });
+}
