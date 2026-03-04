@@ -9,14 +9,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const resultsDiv = document.getElementById('results');
   const themeToggle = document.getElementById('themeToggle');
   const langSelect = document.getElementById('langSelect');
-  const calendarSelect = document.getElementById('calendarSelect'); // nouveau
+  const calendarSelect = document.getElementById('calendarSelect');
 
   // Variables globales
-  let originalData = null;           // données brutes (en anglais)
-  let currentLang = localStorage.getItem('lang') || 'fr'; // français par défaut
-  let currentCalendar = localStorage.getItem('calendar') || 'gregorian'; // nouveau
+  let originalData = null;
+  let currentLang = localStorage.getItem('lang') || 'fr';
+  let currentCalendar = localStorage.getItem('calendar') || 'gregorian';
 
-  // Dictionnaire des textes statiques (interface)
+  // Dictionnaire des textes statiques (interface) – sans les jours
   const uiDict = {
     fr: {
       appTitle: 'Calendrier liturgique orthodoxe',
@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tone: 'Ton',
       chapter: 'Chapitre',
       feastsTitle: 'Fêtes',
-      days: ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
+      feastLevel: 'Niveau de la fête'
     },
     mg: {
       appTitle: 'Kalandrie litorjika ortodoksa',
@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tone: 'Feo',
       chapter: 'Toko',
       feastsTitle: 'Fetin\'ny Fiangonana',
-      days: ['Alahady', 'Alatsinainy', 'Talata', 'Alarobia', 'Alakamisy', 'Zoma', 'Sabotsy']
+      feastLevel: 'Ambaratongam-pankalazana'
     },
     en: {
       appTitle: 'Orthodox Liturgical Calendar',
@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tone: 'Tone',
       chapter: 'Chapter',
       feastsTitle: 'Feasts',
-      days: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+      feastLevel: 'Feast level'
     }
   };
 
@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const savedTheme = localStorage.getItem('theme') || 'light';
   if (savedTheme === 'dark') document.body.classList.add('dark-theme');
   langSelect.value = currentLang;
-  calendarSelect.value = currentCalendar; // initialisation
+  calendarSelect.value = currentCalendar;
   updateStaticTexts();
 
   // Événements
@@ -98,12 +98,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Nouvel événement : changement de calendrier
   calendarSelect.addEventListener('change', (e) => {
     currentCalendar = e.target.value;
     localStorage.setItem('calendar', currentCalendar);
     if (originalData) {
-      // Recharger les données avec la date actuellement affichée
       fetchDay(dateInput.value);
     }
   });
@@ -152,7 +150,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function fetchDay(dateString = null) {
-    // Construction de l'URL dynamique selon le calendrier choisi
     let url = `https://orthocal.info/api/${currentCalendar}/`;
     if (dateString) {
       const [y, m, d] = dateString.split('-');
@@ -170,7 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const response = await fetch(url);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
-      originalData = data;                     // données brutes (anglaises)
+      originalData = data;
       await translateAndDisplay(data);
     } catch (err) {
       console.error(err);
@@ -182,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function translateAndDisplay(data) {
     if (currentLang === 'en') {
-      displayData(data);                        // anglais direct
+      displayData(data);
     } else {
       try {
         console.log(`Tentative de traduction de l'anglais vers ${currentLang}...`);
@@ -193,7 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('Échec de la traduction :', err);
         errorDiv.textContent = 'A technical error occurred. The information is temporarily displayed in English. Please try again later.';
         errorDiv.classList.remove('hidden');
-        displayData(data);                      // fallback en anglais
+        displayData(data);
       }
     }
   }
@@ -202,11 +199,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Traduction automatique via le proxy du serveur (POST /translate)
   // --------------------------------------------------------------
   async function translateData(obj, targetLang) {
-    // Copie profonde de l'objet
     const translated = JSON.parse(JSON.stringify(obj));
 
-    // 1. Traduction des métadonnées simples
-    const simpleFields = ['summary_title', 'fast_level_desc', 'fast_exception_desc', 'service_notes'];
+    // 1. Traduction des métadonnées simples (chaînes)
+    const simpleFields = ['summary_title', 'fast_level_desc', 'fast_exception_desc', 'feast_level_description'];
     for (const field of simpleFields) {
       if (translated[field] && typeof translated[field] === 'string' && translated[field].trim()) {
         const [translatedText] = await translateBatch([translated[field]], targetLang);
@@ -214,15 +210,24 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // 2. Traduction des saints (tableau)
+    // 2. Traduction du tableau service_notes (si présent)
+    if (translated.service_notes && Array.isArray(translated.service_notes) && translated.service_notes.length > 0) {
+      translated.service_notes = await translateBatch(translated.service_notes, targetLang);
+    }
+
+    // 3. Traduction des saints (tableau)
     if (translated.saints && Array.isArray(translated.saints)) {
       translated.saints = await translateBatch(translated.saints, targetLang);
     }
 
-    // 3. Traduction des lectures
+    // 4. Traduction des titres (tableau)
+    if (translated.titles && Array.isArray(translated.titles)) {
+      translated.titles = await translateBatch(translated.titles, targetLang);
+    }
+
+    // 5. Traduction des lectures
     if (translated.readings && Array.isArray(translated.readings)) {
       for (const reading of translated.readings) {
-        // Traduire source et display
         if (reading.source) {
           const [translatedSource] = await translateBatch([reading.source], targetLang);
           reading.source = translatedSource;
@@ -231,7 +236,6 @@ document.addEventListener('DOMContentLoaded', () => {
           const [translatedDisplay] = await translateBatch([reading.display], targetLang);
           reading.display = translatedDisplay;
         }
-        // Traduire les versets de cette lecture (regroupés)
         if (reading.passage && Array.isArray(reading.passage)) {
           const verseContents = reading.passage.map(v => v.content).filter(c => c && c.trim());
           if (verseContents.length > 0) {
@@ -247,7 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // 4. Traduction des histoires (chacune séparément)
+    // 6. Traduction des histoires
     if (translated.stories && Array.isArray(translated.stories)) {
       for (const story of translated.stories) {
         if (story.title) {
@@ -255,8 +259,6 @@ document.addEventListener('DOMContentLoaded', () => {
           story.title = translatedTitle;
         }
         if (story.story) {
-          // Option : traduire en préservant le HTML
-          // Pour simplifier, on traduit directement (Google Translate peut mal gérer les balises)
           const [translatedStory] = await translateBatch([story.story], targetLang);
           story.story = translatedStory;
         }
@@ -266,7 +268,6 @@ document.addEventListener('DOMContentLoaded', () => {
     return translated;
   }
 
-  // Fonction utilitaire pour appeler le proxy de traduction
   async function translateBatch(texts, targetLang) {
     if (!texts || texts.length === 0) return [];
     const response = await fetch('/translate', {
@@ -297,10 +298,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (isSundayOrMajorFeast(data)) {
       titleCard.classList.add('highlight-card');
     }
-    const weekday = t.days[data.weekday] || '';
+
+    // Construction de la ligne de titre
+    let titleLine = '';
+    if (data.titles && data.titles.length > 0) {
+      titleLine = `<p style="font-size: 1.2rem; margin-top: 10px;"><em>${data.titles[0]}</em> — ${t.tone} ${data.tone || '?'}</p>`;
+    } else {
+      titleLine = `<p style="font-size: 1.2rem; margin-top: 10px;">${t.tone} ${data.tone || '?'}</p>`;
+    }
+
     titleCard.innerHTML = `
       <h2><i class="fas fa-calendar-day"></i> ${data.summary_title || 'Titre non disponible'}</h2>
-      <p style="font-size: 1.2rem; margin-top: 10px;"><strong>${weekday}</strong> — ${t.tone} ${data.tone || '?'}</p>
+      ${titleLine}
     `;
     resultsDiv.appendChild(titleCard);
 
@@ -349,11 +358,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Informations complémentaires
     const extraCard = createCard();
-    extraCard.innerHTML = `
-      <h2><i class="fas fa-info-circle"></i> ${t.info}</h2>
-      <p><strong>${t.paschaDistance} :</strong> ${data.pascha_distance ?? '—'} jours</p>
-      ${data.service_notes ? `<p><strong>${t.notes} :</strong> ${data.service_notes}</p>` : ''}
-    `;
+    let extraHTML = `<h2><i class="fas fa-info-circle"></i> ${t.info}</h2>`;
+    extraHTML += `<p><strong>${t.paschaDistance} :</strong> ${data.pascha_distance ?? '—'} jours</p>`;
+    if (data.feast_level_description) {
+      extraHTML += `<p><strong>${t.feastLevel} :</strong> ${data.feast_level_description}</p>`;
+    }
+    if (data.service_notes && Array.isArray(data.service_notes) && data.service_notes.length > 0) {
+      extraHTML += `<p><strong>${t.notes} :</strong></p><ul class="note-list">`;
+      data.service_notes.forEach(note => {
+        extraHTML += `<li>${note}</li>`;
+      });
+      extraHTML += `</ul>`;
+    } else if (data.service_notes && typeof data.service_notes === 'string') {
+      // Au cas où ce serait une chaîne (ancien format)
+      extraHTML += `<p><strong>${t.notes} :</strong> ${data.service_notes}</p>`;
+    }
+    extraCard.innerHTML = extraHTML;
     resultsDiv.appendChild(extraCard);
 
     // Lectures
