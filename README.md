@@ -53,11 +53,11 @@ External API orthocal.info
 └── public/
     ├── index.html        # Main web page
     ├── style.css         # Styles (light/dark theme included)
-    ├── script.js         # Frontend logic (API, translation, display)
-    └── ort.txt           # Data file (currently empty)
+    └──  script.js         # Frontend logic (API, translation, display)
+ 
 ```
 
----
+
 
 🔗 Usage
 
